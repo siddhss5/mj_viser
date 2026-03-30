@@ -22,6 +22,14 @@ class GuiManager:
         self._step_requested = False
         self._reset_requested = False
 
+        # Discover which geom groups have rendered geoms (skip unsupported types like plane/hfield).
+        from mj_viser.geom_builders import GEOM_BUILDERS
+
+        used_groups: set[int] = set()
+        for geom_id in range(model.ngeom):
+            if model.geom_type[geom_id] in GEOM_BUILDERS:
+                used_groups.add(int(model.geom_group[geom_id]))
+
         gui = server.gui
 
         # --- Simulation controls ---
@@ -38,10 +46,10 @@ class GuiManager:
                 initial_value=1.0,
             )
 
-        # --- Visibility toggles ---
+        # --- Visibility toggles (only for groups that have geoms) ---
         with gui.add_folder("Visibility", order=1):
             self._group_toggles: dict[int, viser.GuiCheckboxHandle] = {}
-            for g in range(6):
+            for g in sorted(used_groups):
                 self._group_toggles[g] = gui.add_checkbox(
                     f"Group {g}",
                     initial_value=True,
