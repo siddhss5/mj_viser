@@ -149,6 +149,8 @@ class MujocoViewer:
 
     def _build(self, open_browser: bool) -> None:
         """One-time scene + GUI setup."""
+        # Compute forward kinematics so geom positions are valid before rendering.
+        mujoco.mj_forward(self._model, self._data)
         self._scene_mgr.build_scene()
 
         if self._show_gui:
