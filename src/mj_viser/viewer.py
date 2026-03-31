@@ -118,7 +118,7 @@ class MujocoViewer:
         """
         self._scene_mgr.update_transforms()
 
-        if self._gui_mgr is not None and self._gui_mgr.visibility_changed:
+        if self._gui_mgr is not None:
             self._scene_mgr.update_visibility(self._gui_mgr.visible_groups())
 
         for panel in self._panels:
@@ -156,6 +156,10 @@ class MujocoViewer:
             self._gui_mgr = GuiManager(self._server, self._model)
             # Apply initial group visibility (groups 3+ hidden by default)
             self._scene_mgr.update_visibility(self._gui_mgr.visible_groups())
+            # Wire visibility toggles to update immediately (no sync needed)
+            self._gui_mgr._visibility_callback.append(
+                lambda: self._scene_mgr.update_visibility(self._gui_mgr.visible_groups())
+            )
 
         for panel in self._panels:
             panel.setup(self._server.gui, self)

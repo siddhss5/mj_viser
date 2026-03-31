@@ -47,7 +47,7 @@ class GuiManager:
             )
 
         # --- Visibility toggles (only for groups that have geoms) ---
-        self._visibility_changed = False
+        self._visibility_callback: list = []  # [(callable)] set by viewer
         with gui.add_folder("Visibility", order=1):
             self._group_toggles: dict[int, viser.GuiCheckboxHandle] = {}
             for g in sorted(used_groups):
@@ -57,8 +57,8 @@ class GuiManager:
 
                 @toggle.on_update
                 def _(_: viser.GuiEvent) -> None:
-                    with self._lock:
-                        self._visibility_changed = True
+                    for cb in self._visibility_callback:
+                        cb()
 
         # --- Wire up callbacks ---
         @self._play_btn.on_click
@@ -105,15 +105,6 @@ class GuiManager:
         with self._lock:
             if self._reset_requested:
                 self._reset_requested = False
-                return True
-            return False
-
-    @property
-    def visibility_changed(self) -> bool:
-        """Return True if visibility was toggled, consuming the flag."""
-        with self._lock:
-            if self._visibility_changed:
-                self._visibility_changed = False
                 return True
             return False
 

@@ -123,7 +123,12 @@ def build_mesh(
         from PIL import Image
 
         image = Image.fromarray(texture_rgb)
-        material = trimesh.visual.material.SimpleMaterial(image=image)
+        material = trimesh.visual.material.PBRMaterial(
+            baseColorFactor=[1.0, 1.0, 1.0, 1.0],
+            baseColorTexture=image,
+            metallicFactor=0.0,
+            roughnessFactor=0.8,
+        )
         visual = trimesh.visual.TextureVisuals(uv=texcoords, material=material)
         mesh = trimesh.Trimesh(vertices=verts, faces=faces, visual=visual)
         return scene.add_mesh_trimesh(
