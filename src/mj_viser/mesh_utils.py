@@ -175,7 +175,7 @@ def extract_mujoco_mesh_textured(
         tc_adr = model.mesh_texcoordadr[mesh_id]
         raw_tc = model.mesh_texcoord[tc_adr : tc_adr + tc_num].copy().astype(np.float32)
 
-        if tc_num == vert_num:
+        if tc_num == len(verts):
             # Per-vertex UVs — use directly
             texcoords = raw_tc
         else:
