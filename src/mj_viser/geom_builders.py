@@ -135,7 +135,6 @@ def build_mesh(
         return scene.add_mesh_trimesh(
             _geom_name(geom_id),
             mesh=mesh,
-            opacity=_resolve_opacity(model, geom_id),
         )
 
     # Fallback: solid color
