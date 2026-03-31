@@ -58,24 +58,19 @@ class SceneManager:
         self.update_transforms()
 
     def update_transforms(self) -> None:
-        """Update all geom positions and orientations from current MjData state.
-
-        Geoms below z = -0.5 are hidden (MuJoCo convention for deactivated objects).
-        Respects group visibility toggles.
-        """
+        """Update all geom positions, orientations, and visibility."""
         with self._server.atomic():
             for geom_id, handle in self._geom_handles.items():
-                group = int(self._model.geom_group[geom_id])
                 pos = self._data.geom_xpos[geom_id]
 
-                # Hidden by group toggle or underground (deactivated)
-                if group in self._hidden_groups or pos[2] < -0.5:
-                    handle.visible = False
-                    continue
-
-                handle.visible = True
+                # Always update transforms (even for hidden geoms, so they're
+                # correct if toggled back on)
                 handle.position = mj_pos_to_viser(pos)
                 handle.wxyz = xmat_to_wxyz(self._data.geom_xmat[geom_id])
+
+                # Visibility: hidden by group toggle or underground
+                group = int(self._model.geom_group[geom_id])
+                handle.visible = group not in self._hidden_groups and float(pos[2]) >= -0.5
 
     def update_visibility(self, visible_groups: set[int]) -> None:
         """Toggle geom visibility based on MuJoCo geom groups."""
