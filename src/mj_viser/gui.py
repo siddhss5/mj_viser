@@ -51,7 +51,8 @@ class GuiManager:
         with gui.add_folder("Visibility", order=1):
             self._group_toggles: dict[int, viser.GuiCheckboxHandle] = {}
             for g in sorted(used_groups):
-                toggle = gui.add_checkbox(f"Group {g}", initial_value=True)
+                # MuJoCo default: groups 0-2 visible, groups 3-5 hidden
+                toggle = gui.add_checkbox(f"Group {g}", initial_value=(g <= 2))
                 self._group_toggles[g] = toggle
 
                 @toggle.on_update

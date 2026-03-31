@@ -154,6 +154,8 @@ class MujocoViewer:
 
         if self._show_gui:
             self._gui_mgr = GuiManager(self._server, self._model)
+            # Apply initial group visibility (groups 3+ hidden by default)
+            self._scene_mgr.update_visibility(self._gui_mgr.visible_groups())
 
         for panel in self._panels:
             panel.setup(self._server.gui, self)

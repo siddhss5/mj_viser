@@ -28,6 +28,7 @@ class SceneManager:
         self._model = model
         self._data = data
         self._geom_handles: dict[int, viser.SceneNodeHandle] = {}
+        self._hidden_groups: set[int] = set()  # groups toggled off by user
 
     def build_scene(self) -> None:
         """Create Viser scene nodes for all supported MuJoCo geoms."""
@@ -60,23 +61,26 @@ class SceneManager:
         """Update all geom positions and orientations from current MjData state.
 
         Geoms below z = -0.5 are hidden (MuJoCo convention for deactivated objects).
+        Respects group visibility toggles.
         """
         with self._server.atomic():
             for geom_id, handle in self._geom_handles.items():
+                group = int(self._model.geom_group[geom_id])
                 pos = self._data.geom_xpos[geom_id]
-                # Hide objects that have been moved underground (deactivated)
-                if pos[2] < -0.5:
+
+                # Hidden by group toggle or underground (deactivated)
+                if group in self._hidden_groups or pos[2] < -0.5:
                     handle.visible = False
                     continue
+
                 handle.visible = True
                 handle.position = mj_pos_to_viser(pos)
                 handle.wxyz = xmat_to_wxyz(self._data.geom_xmat[geom_id])
 
     def update_visibility(self, visible_groups: set[int]) -> None:
         """Toggle geom visibility based on MuJoCo geom groups."""
-        for geom_id, handle in self._geom_handles.items():
-            group = int(self._model.geom_group[geom_id])
-            handle.visible = group in visible_groups
+        all_groups = {int(self._model.geom_group[gid]) for gid in self._geom_handles}
+        self._hidden_groups = all_groups - visible_groups
 
     def _setup_lighting(self) -> None:
         """Create a clean three-point lighting setup."""
