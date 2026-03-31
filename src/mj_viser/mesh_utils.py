@@ -173,7 +173,27 @@ def extract_mujoco_mesh_textured(
     tc_num = model.mesh_texcoordnum[mesh_id]
     if tc_num > 0:
         tc_adr = model.mesh_texcoordadr[mesh_id]
-        texcoords = model.mesh_texcoord[tc_adr : tc_adr + tc_num].copy().astype(np.float32)
+        raw_tc = model.mesh_texcoord[tc_adr : tc_adr + tc_num].copy().astype(np.float32)
+
+        if tc_num == vert_num:
+            # Per-vertex UVs — use directly
+            texcoords = raw_tc
+        else:
+            # Per-face-vertex UVs — unpack by duplicating vertices so each
+            # face corner gets its own vertex with unique UV.
+            face_num = model.mesh_facenum[mesh_id]
+            face_adr = model.mesh_faceadr[mesh_id]
+            raw_faces = model.mesh_face[face_adr : face_adr + face_num]
+
+            new_verts = verts[raw_faces.flatten()]  # (F*3, 3)
+            texcoords = raw_tc[: face_num * 3]  # MuJoCo stores F*3 texcoords
+            faces = np.arange(face_num * 3, dtype=np.int32).reshape(-1, 3)
+            verts = new_verts.astype(np.float32)
+
+    # Flip V coordinate: MuJoCo uses top-left origin, OpenGL uses bottom-left
+    if texcoords is not None:
+        texcoords = texcoords.copy()
+        texcoords[:, 1] = 1.0 - texcoords[:, 1]
 
     # Extract texture image
     texture_rgb = None
