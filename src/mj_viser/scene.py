@@ -37,6 +37,15 @@ class SceneManager:
 
         scene = self._server.scene
         for geom_id in range(self._model.ngeom):
+            # Skip invisible geoms (collision-only or hidden)
+            mat_id = self._model.geom_matid[geom_id]
+            if mat_id >= 0:
+                alpha = self._model.mat_rgba[mat_id][3]
+            else:
+                alpha = self._model.geom_rgba[geom_id][3]
+            if alpha == 0:
+                continue
+
             geom_type = self._model.geom_type[geom_id]
             builder = GEOM_BUILDERS.get(geom_type)
             if builder is None:

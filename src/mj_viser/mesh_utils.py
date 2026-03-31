@@ -126,11 +126,7 @@ def extract_mujoco_mesh(
     model: mujoco.MjModel,
     mesh_id: int,
 ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.int32]]:
-    """Extract vertices and faces for a MuJoCo mesh, applying centering transform.
-
-    MuJoCo auto-centers meshes during compilation and stores the offset in
-    ``mesh_pos`` and ``mesh_quat``. This function applies that transform so the
-    returned vertices are in the geom-local frame.
+    """Extract vertices and faces for a MuJoCo mesh.
 
     Args:
         model: The compiled MuJoCo model.
@@ -149,6 +145,53 @@ def extract_mujoco_mesh(
     faces = model.mesh_face[face_adr : face_adr + face_num].copy()
 
     return verts.astype(np.float32), faces.astype(np.int32)
+
+
+def extract_mujoco_mesh_textured(
+    model: mujoco.MjModel,
+    mesh_id: int,
+    geom_id: int,
+) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.int32], npt.NDArray[np.float32] | None, npt.NDArray[np.uint8] | None]:
+    """Extract vertices, faces, UV coordinates, and texture for a MuJoCo mesh.
+
+    Args:
+        model: The compiled MuJoCo model.
+        mesh_id: Index into the model's mesh arrays.
+        geom_id: Geom index (to resolve material → texture).
+
+    Returns:
+        ``(vertices, faces, texcoords, texture_rgb)`` where:
+        - vertices: ``(N, 3)`` float32
+        - faces: ``(M, 3)`` int32
+        - texcoords: ``(N, 2)`` float32 or None if no UV data
+        - texture_rgb: ``(H, W, 3)`` uint8 or None if no texture
+    """
+    verts, faces = extract_mujoco_mesh(model, mesh_id)
+
+    # Extract UV coordinates
+    texcoords = None
+    tc_num = model.mesh_texcoordnum[mesh_id]
+    if tc_num > 0:
+        tc_adr = model.mesh_texcoordadr[mesh_id]
+        texcoords = model.mesh_texcoord[tc_adr : tc_adr + tc_num].copy().astype(np.float32)
+
+    # Extract texture image
+    texture_rgb = None
+    mat_id = model.geom_matid[geom_id]
+    if mat_id >= 0:
+        tex_id = model.mat_texid[mat_id][1]  # index 1 = "2d" texture type
+        if tex_id >= 0:
+            h = model.tex_height[tex_id]
+            w = model.tex_width[tex_id]
+            nc = model.tex_nchannel[tex_id]
+            adr = model.tex_adr[tex_id]
+            tex_data = model.tex_data[adr : adr + h * w * nc].reshape(h, w, nc)
+            if nc == 3:
+                texture_rgb = tex_data.copy()
+            elif nc == 4:
+                texture_rgb = tex_data[:, :, :3].copy()
+
+    return verts, faces, texcoords, texture_rgb
 
 
 # ---------------------------------------------------------------------------

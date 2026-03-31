@@ -8,7 +8,12 @@ import mujoco
 import numpy as np
 import viser
 
-from mj_viser.mesh_utils import extract_mujoco_mesh, make_capsule_mesh, make_ellipsoid_mesh
+from mj_viser.mesh_utils import (
+    extract_mujoco_mesh,
+    extract_mujoco_mesh_textured,
+    make_capsule_mesh,
+    make_ellipsoid_mesh,
+)
 
 
 def _resolve_color(model: mujoco.MjModel, geom_id: int) -> tuple[int, int, int]:
@@ -108,7 +113,32 @@ def build_mesh(
     scene: viser.SceneApi, geom_id: int, model: mujoco.MjModel
 ) -> viser.MeshHandle:
     mesh_id = model.geom_dataid[geom_id]
-    verts, faces = extract_mujoco_mesh(model, mesh_id)
+    verts, faces, texcoords, texture_rgb = extract_mujoco_mesh_textured(
+        model, mesh_id, geom_id,
+    )
+
+    # Use textured mesh if UV + texture data available
+    if texcoords is not None and texture_rgb is not None and len(texcoords) == len(verts):
+        import trimesh
+        import trimesh.visual
+
+        material = trimesh.visual.material.PBRMaterial(
+            baseColorTexture=trimesh.visual.texture.TextureVisuals(
+                uv=texcoords,
+                image=__import__("PIL").Image.fromarray(texture_rgb),
+            ).material.image,
+        )
+        mesh = trimesh.Trimesh(
+            vertices=verts, faces=faces,
+            visual=trimesh.visual.TextureVisuals(uv=texcoords, material=material),
+        )
+        return scene.add_mesh_trimesh(
+            _geom_name(geom_id),
+            mesh=mesh,
+            opacity=_resolve_opacity(model, geom_id),
+        )
+
+    # Fallback: solid color
     return scene.add_mesh_simple(
         _geom_name(geom_id),
         vertices=verts,

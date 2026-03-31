@@ -118,9 +118,8 @@ class MujocoViewer:
         """
         self._scene_mgr.update_transforms()
 
-        if self._gui_mgr is not None:
-            groups = self._gui_mgr.visible_groups()
-            self._scene_mgr.update_visibility(groups)
+        if self._gui_mgr is not None and self._gui_mgr.visibility_changed:
+            self._scene_mgr.update_visibility(self._gui_mgr.visible_groups())
 
         for panel in self._panels:
             panel.on_sync(self)
