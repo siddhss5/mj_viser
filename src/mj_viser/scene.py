@@ -81,6 +81,16 @@ class SceneManager:
         """Toggle geom visibility based on MuJoCo geom groups."""
         all_groups = {int(self._model.geom_group[gid]) for gid in self._geom_handles}
         self._hidden_groups = all_groups - visible_groups
+        # Apply immediately (don't wait for update_transforms)
+        with self._server.atomic():
+            for geom_id, handle in self._geom_handles.items():
+                group = int(self._model.geom_group[geom_id])
+                if group in self._hidden_groups:
+                    handle.visible = False
+                else:
+                    # Only show if not underground (hidden by registry)
+                    pos = self._data.geom_xpos[geom_id]
+                    handle.visible = pos[2] >= -0.5
 
     def _setup_lighting(self) -> None:
         """Create a clean three-point lighting setup."""
